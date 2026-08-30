@@ -2,7 +2,7 @@
 
 Tiny Tennis is a browser tennis game controlled by keyboard today and by ESP32-S3 motion controllers when connected. The Arduino TinyML model is trained to classify the player's swing; the controller sends the classification and swing measurements to the game over a WebSocket.
 
-![game screenshot](game.png)
+![game screenshot](game-screenshot.png)
 
 **LIVE GAME:** https://humorous-youth-production.up.railway.app/
 
