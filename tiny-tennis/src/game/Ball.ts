@@ -3,8 +3,12 @@ import Phaser from "phaser";
 import type { GameAction, PlayerId, ShotType } from "../input/GameAction";
 import { COURT } from "./Court";
 
-const HIT_WINDOW_START = 0.8;
-const HIT_WINDOW_END = 0.97;
+// Widened from 0.8-0.97 (17% of flight) - see PracticeBall.ts for why: the
+// gesture controller pipeline's inherent latency made a correctly-classified
+// swing miss on timing alone, and hitting before the bounce just reads as a
+// volley rather than being visually wrong.
+const HIT_WINDOW_START = 0.4;
+const HIT_WINDOW_END = 0.99;
 const BOUNCE_PROGRESS = 0.72;
 const CONTACT_HEIGHT = 28;
 const SHOT_SIDE_THRESHOLD = 0.06;

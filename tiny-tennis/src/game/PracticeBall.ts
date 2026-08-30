@@ -8,8 +8,15 @@ const FAR_LEFT = 310;
 const FAR_RIGHT = 970;
 const NEAR_LEFT = 120;
 const NEAR_RIGHT = 1160;
-const HIT_WINDOW_START = 0.73;
-const HIT_WINDOW_END = 0.965;
+// Widened from 0.73-0.965 (23.5% of flight): the gesture controller pipeline
+// (capture window + classify + relay round-trip) adds several hundred ms of
+// inherent latency versus a keyboard press, so a narrow late-flight-only
+// window made a correctly-classified swing miss anyway just from timing.
+// A swing landing before the visual ground bounce just reads as a volley,
+// same as in real tennis, so there's no need to keep this pinned above
+// INBOUND_BOUNCE_PROGRESS (0.68).
+const HIT_WINDOW_START = 0.4;
+const HIT_WINDOW_END = 0.99;
 const MISS_FLIGHT_MS = 540;
 const INBOUND_BOUNCE_PROGRESS = 0.68;
 

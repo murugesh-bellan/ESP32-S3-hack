@@ -208,21 +208,38 @@ void pollWifiServer() {
 WebSocketsClient wsClient;
 bool wsConnected = false;
 
+// Room is chosen on-device (see the room-select screen below), not fixed at
+// build time - WS_ROOM from ws_config.h is only the initial default shown.
+// shouldJoin becomes true the first time the user taps JOIN and stays true,
+// so a later reconnect (Railway redeploy, WiFi blip) automatically re-sends
+// the join for the same room instead of leaving the connection un-joined.
+char currentRoom[16] = WS_ROOM;
+bool shouldJoin = false;
+bool hasJoinedBefore = false;  // gates whether re-joining needs a fresh connection (see joinSelectedRoom)
+
+void sendJoin() {
+  char join[96];
+  snprintf(join, sizeof(join), "{\"type\":\"join\",\"role\":\"controller\",\"room\":\"%s\",\"player\":%d}",
+           currentRoom, WS_PLAYER);
+  wsClient.sendTXT(join);
+  Serial.printf("WS join sent: %s\n", join);
+}
+
 void onWsEvent(WStype_t type, uint8_t *payload, size_t length) {
   switch (type) {
-    case WStype_CONNECTED: {
+    case WStype_CONNECTED:
       wsConnected = true;
       Serial.printf("WS connected to %s:%d%s\n", WS_HOST, WS_PORT, WS_PATH);
       // server/index.js drops any "gesture" message until this connection has
-      // joined a room as a controller - join must happen before sendGestureEvent
-      // can do anything useful.
-      char join[96];
-      snprintf(join, sizeof(join), "{\"type\":\"join\",\"role\":\"controller\",\"room\":\"%s\",\"player\":%d}",
-               WS_ROOM, WS_PLAYER);
-      wsClient.sendTXT(join);
-      Serial.printf("WS join sent: %s\n", join);
+      // joined a room as a controller - only send once the user has actually
+      // picked a room and tapped JOIN (a second join on one connection is
+      // rejected by the server as "already-joined", so this must not fire on
+      // every reconnect unconditionally before that point).
+      if (shouldJoin) {
+        sendJoin();
+        hasJoinedBefore = true;
+      }
       break;
-    }
     case WStype_DISCONNECTED:
       wsConnected = false;
       Serial.println("WS disconnected.");
@@ -633,7 +650,79 @@ void drawPlayScreen() {
   }
 }
 
+// ---- Room select (gates everything else at boot) ------------------------
+// One room per boot: pick it here, tap JOIN, then Play/Log proceed as usual.
+// Avoids needing a separate firmware build per demo room.
+
+constexpr int16_t ROOM_MINUS_X = 40, ROOM_MINUS_Y = 210, ROOM_BTN_SIZE = 70;
+constexpr int16_t ROOM_PLUS_X = 258, ROOM_PLUS_Y = 210;
+constexpr int16_t JOIN_X = 16, JOIN_Y = 330, JOIN_W = 336, JOIN_H = 80;
+
+void drawRoomSelectScreen() {
+  gfx->fillScreen(RGB565_BLACK);
+  gfx->setTextSize(3);
+  gfx->setCursor(16, 16);
+  gfx->setTextColor(RGB565_LIMEGREEN);
+  gfx->print("TENNIS HACK");
+
+  gfx->setTextSize(2);
+  gfx->setTextColor(RGB565_DIMGRAY);
+  gfx->setCursor(70, 160);
+  gfx->print("SELECT ROOM");
+
+  gfx->fillRoundRect(ROOM_MINUS_X, ROOM_MINUS_Y, ROOM_BTN_SIZE, ROOM_BTN_SIZE, 10, RGB565_DIMGRAY);
+  gfx->setTextSize(4);
+  gfx->setTextColor(RGB565_WHITE);
+  gfx->setCursor(ROOM_MINUS_X + 24, ROOM_MINUS_Y + 20);
+  gfx->print("-");
+
+  gfx->fillRoundRect(ROOM_PLUS_X, ROOM_PLUS_Y, ROOM_BTN_SIZE, ROOM_BTN_SIZE, 10, RGB565_DIMGRAY);
+  gfx->setCursor(ROOM_PLUS_X + 20, ROOM_PLUS_Y + 20);
+  gfx->print("+");
+
+  gfx->setTextSize(3);
+  gfx->setTextColor(RGB565_LIMEGREEN);
+  gfx->setCursor(184 - (strlen(currentRoom) * 9), ROOM_MINUS_Y + 24);
+  gfx->print(currentRoom);
+
+  gfx->fillRoundRect(JOIN_X, JOIN_Y, JOIN_W, JOIN_H, 14, RGB565_LIMEGREEN);
+  gfx->setTextSize(3);
+  gfx->setTextColor(RGB565_WHITE);
+  gfx->setCursor(JOIN_X + JOIN_W / 2 - 54, JOIN_Y + JOIN_H / 2 - 12);
+  gfx->print("JOIN");
+}
+
+void setRoomDigit(int delta) {
+  int digit = currentRoom[4] - '0';  // "DEMO<digit>"
+  digit = ((digit - 1 + delta + 9) % 9) + 1;
+  snprintf(currentRoom, sizeof(currentRoom), "DEMO%d", digit);
+  drawRoomSelectScreen();
+}
+
+void drawScreen();  // defined below; joinSelectedRoom() needs to refresh the screen after joining
+
+void joinSelectedRoom() {
+  shouldJoin = true;
+  if (hasJoinedBefore && wsConnected) {
+    // The relay rejects a second join on an already-joined connection ("this
+    // connection already joined a room"), so get a fresh one - the automatic
+    // reconnect (setReconnectInterval) brings it back, and onWsEvent's
+    // CONNECTED case sends the join for whatever room is now selected.
+    wsClient.disconnect();
+  } else if (wsConnected) {
+    sendJoin();
+    hasJoinedBefore = true;
+  }
+  // else: not connected yet - onWsEvent's CONNECTED case will send the join
+  drawScreen();
+}
+
 void drawScreen() {
+  if (!shouldJoin) {
+    drawRoomSelectScreen();
+    return;
+  }
+
   gfx->fillScreen(RGB565_BLACK);
   gfx->setTextSize(3);
   gfx->setCursor(16, 16);
@@ -683,6 +772,17 @@ void setStreaming(bool on) {
 }
 
 void handleTap(int16_t x, int16_t y) {
+  if (!shouldJoin) {
+    if (inside(x, y, ROOM_MINUS_X, ROOM_MINUS_Y, ROOM_BTN_SIZE, ROOM_BTN_SIZE)) {
+      setRoomDigit(-1);
+    } else if (inside(x, y, ROOM_PLUS_X, ROOM_PLUS_Y, ROOM_BTN_SIZE, ROOM_BTN_SIZE)) {
+      setRoomDigit(1);
+    } else if (inside(x, y, JOIN_X, JOIN_Y, JOIN_W, JOIN_H)) {
+      joinSelectedRoom();
+    }
+    return;  // no other tap targets until a room is joined
+  }
+
   if (inside(x, y, MODE_BTN_X, MODE_BTN_Y, MODE_BTN_W, MODE_BTN_H)) {
     // Separate, longer debounce than the general 250ms one: a finger resting
     // or brushing near this corner during a swing was re-triggering the
@@ -695,7 +795,16 @@ void handleTap(int16_t x, int16_t y) {
     setPlayMode(!playMode);
     return;
   }
-  if (playMode) return;  // Play mode has no other tap targets besides the toggle
+  if (playMode) {
+    // Tap anywhere to dismiss the shot card immediately instead of waiting
+    // out the full CARD_DISPLAY_MS timeout - lets the next swing be captured
+    // right away.
+    if (cardVisible) {
+      cardVisible = false;
+      drawPlayIdle();
+    }
+    return;
+  }
 
   for (size_t i = 0; i < LABEL_BUTTON_COUNT; i++) {
     LabelButton &b = labelButtons[i];
@@ -740,6 +849,15 @@ void process(char *command) {
   if (strcasecmp(command, "STREAM OFF") == 0) { setStreaming(false); return; }
   if (strcasecmp(command, "MODE PLAY") == 0) { setPlayMode(true); return; }
   if (strcasecmp(command, "MODE LOG") == 0) { setPlayMode(false); return; }
+  if (strcasecmp(command, "MODE ROOM") == 0) {
+    // Back to the room-select screen. The relay rejects a second join on an
+    // already-joined connection, so joinSelectedRoom() forces a fresh
+    // connection when JOIN is tapped again.
+    shouldJoin = false;
+    broadcastf("OK MODE ROOM\n");
+    drawScreen();
+    return;
+  }
   broadcastf("ERROR unknown command; send HELP.\n");
 }
 
