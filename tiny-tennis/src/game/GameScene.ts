@@ -450,7 +450,15 @@ export class GameScene extends Phaser.Scene {
   private finishMatch(winner: PlayerId): void {
     this.matchOver = true;
     this.ball.stop();
-    playWon(this);
+    // playWon() is the victory fanfare - only play it when the human actually
+    // won. Against the computer (mode "computer"), player 2 winning is a
+    // loss for the person playing, not a win, so it shouldn't sound like one.
+    const humanWon = this.mode !== "computer" || winner === 1;
+    if (humanWon) {
+      playWon(this);
+    } else {
+      playOut(this);
+    }
     this.stadium.reactCrowd(1.6);
     this.players[winner].celebrate();
     this.showWinnerConfetti();

@@ -237,7 +237,10 @@ export class Ball {
     const aimedPlacement = action.direction * 0.68;
     this.toX = Phaser.Math.Clamp(naturalPlacement + aimedPlacement, -0.82, 0.82);
 
-    this.shotDurationMs = Phaser.Math.Linear(1_800, 980, power);
+    // Slowed down (was 1_800-980): the gesture pipeline's inherent latency
+    // needs more real time to land within the hit window than a keyboard
+    // press does.
+    this.shotDurationMs = Phaser.Math.Linear(2_400, 1_500, power);
     this.shotPower = power;
     this.arcHeight = Phaser.Math.Linear(124, 88, power);
     this.reboundHeight = Phaser.Math.Linear(27, 47, power);

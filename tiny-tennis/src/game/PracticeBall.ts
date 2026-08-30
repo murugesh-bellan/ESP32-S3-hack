@@ -221,7 +221,10 @@ export class PracticeBall {
     this.fromX = this.toX;
     this.power = Phaser.Math.Clamp(action.power, 0, 1);
     this.toX = Phaser.Math.Clamp(action.direction * 0.72, -0.8, 0.8);
-    this.durationMs = Phaser.Math.Linear(1_280, 720, this.power);
+    // Slowed down (was 1_280-720): the gesture pipeline's inherent latency
+    // needs more real time to land within the hit window than a keyboard
+    // press does.
+    this.durationMs = Phaser.Math.Linear(1_700, 1_100, this.power);
     this.trailPoints.length = 0;
     this.trail.clear();
     this.renderAt(0);
@@ -234,7 +237,9 @@ export class PracticeBall {
     this.fromX = this.toX;
     this.targetIndex = (this.targetIndex + 1) % this.returnTargets.length;
     this.toX = this.returnTargets[this.targetIndex];
-    this.durationMs = Phaser.Math.Linear(1_500, 1_180, this.power);
+    // Slowed down (was 1_500-1_180) for the same reason as the outbound leg
+    // above - this is the return flight the player actually has to react to.
+    this.durationMs = Phaser.Math.Linear(2_000, 1_600, this.power);
     this.callbacks.onIncoming(this.toX);
     this.trailPoints.length = 0;
     this.trail.clear();
