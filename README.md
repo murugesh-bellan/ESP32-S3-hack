@@ -4,8 +4,7 @@ Tiny Tennis is a browser tennis game controlled by keyboard today and by ESP32-S
 
 ## Authors:
 
-Suyash Joshi
-Murugesh Bellan
+Suyash Joshi & Murugesh Bellan
 
 ![game screenshot](game-screenshot.png)
 
