@@ -280,7 +280,14 @@ float dynMag(const ImuSample &s) {
   return sqrtf(s.ax * s.ax + s.ay * s.ay + s.az * s.az) - 1.0f;
 }
 
-constexpr float SWING_THRESHOLD_G = 1.5f;
+// 1.5g let weak jostles/bumps through: the model classifies on spectral
+// *shape*, not magnitude, so a low-amplitude motion that happens to have a
+// swing-like frequency profile can still get a high-confidence (wrong) label
+// even though it's nothing like a real swing (real captured swings peak at
+// 10-12g; a live false-positive at 2.29g was confidently called "backhand" -
+// see commit message for the raw log line). 3.0g leaves a wide margin below
+// genuine swings while filtering that class of noise.
+constexpr float SWING_THRESHOLD_G = 3.0f;
 // 600ms causally-captured window (trigger + fixed forward duration, seeded
 // with pre-roll) - matches the model's 120-sample/200Hz training window
 // length exactly; the resample step below retimes it onto that 200Hz grid.
@@ -677,6 +684,14 @@ void setStreaming(bool on) {
 
 void handleTap(int16_t x, int16_t y) {
   if (inside(x, y, MODE_BTN_X, MODE_BTN_Y, MODE_BTN_W, MODE_BTN_H)) {
+    // Separate, longer debounce than the general 250ms one: a finger resting
+    // or brushing near this corner during a swing was re-triggering the
+    // toggle repeatedly (observed 4 flips inside ~1s), each individual tap
+    // still passing the 250ms check. A deliberate mode change is rare enough
+    // that 1.5s between toggles costs nothing.
+    static uint32_t lastModeToggle = 0;
+    if (millis() - lastModeToggle < 1500) return;
+    lastModeToggle = millis();
     setPlayMode(!playMode);
     return;
   }
