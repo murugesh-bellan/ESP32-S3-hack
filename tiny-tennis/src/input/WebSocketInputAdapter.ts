@@ -66,10 +66,14 @@ export class WebSocketInputAdapter implements InputAdapter {
     try {
       message = JSON.parse(event.data);
     } catch {
+      console.warn("Tiny Tennis WS: non-JSON message", event.data);
       return;
     }
 
     if (!this.isShotMessage(message)) {
+      // Not acted on as gameplay, but still worth seeing - e.g. "joined",
+      // "participant-joined", "error", or a gesture that failed validation.
+      console.debug("Tiny Tennis WS recv (not a shot)", message);
       return;
     }
 
@@ -82,6 +86,7 @@ export class WebSocketInputAdapter implements InputAdapter {
       confidence: confidence === undefined ? undefined : clamp(confidence, 0, 1),
       timestamp: message.timestamp ?? performance.now(),
     };
+    console.info("Tiny Tennis WS shot ->", action);
     this.onAction?.(action);
     this.options.onShot?.(action);
   };

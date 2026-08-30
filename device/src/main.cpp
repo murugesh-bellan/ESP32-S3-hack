@@ -248,12 +248,16 @@ void setupWebSocket() {
 
 // {"type":"gesture","gesture":"forehand","strength":82,"probability":0.94}
 void sendGestureEvent(const char *gesture, int strength, float probability) {
-  if (!wsConnected) return;
   char json[128];
   snprintf(json, sizeof(json),
            "{\"type\":\"gesture\",\"gesture\":\"%s\",\"strength\":%d,\"probability\":%.2f}",
            gesture, strength, probability);
-  wsClient.sendTXT(json);
+  if (!wsConnected) {
+    Serial.printf("WS SEND SKIPPED (not connected): %s\n", json);
+    return;
+  }
+  bool ok = wsClient.sendTXT(json);
+  Serial.printf("WS SEND %s: %s\n", ok ? "ok" : "FAILED", json);
 }
 
 // ---- Gesture inference (Play mode) --------------------------------------
