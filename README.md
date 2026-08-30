@@ -16,13 +16,15 @@ https://gist.github.com/sam-tucker/81840112bb3747a2f641d248b08507b6
 
 5. Show in UI & output in logs, later we will need to send it to the Game server using sockets - MB
 
-   ╭──────────────╮
+```sh
+╭──────────────╮
 │   FOREHAND   │
 │              │
 │   █████ 87%  │
 │              │
 │   62 km/h    │
 ╰──────────────╯
+```
 
 7. Game (Central Server that is talking to the arduino's over websocket): - SJ
 
