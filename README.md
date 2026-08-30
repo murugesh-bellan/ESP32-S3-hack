@@ -2,6 +2,10 @@
 
 Tiny Tennis is a browser tennis game controlled by keyboard today and by ESP32-S3 motion controllers when connected. The Arduino TinyML model is trained to classify the player's swing; the controller sends the classification and swing measurements to the game over a WebSocket.
 
+![game screenshot](game.png)
+
+**LIVE GAME:** https://humorous-youth-production.up.railway.app/
+
 ## How everything fits together
 
 ```text
@@ -28,13 +32,18 @@ wss://YOUR-RAILWAY-DOMAIN/ws
 Join one controller to Player 1 (use Player 2 for the other controller):
 
 ```json
-{"type":"join","role":"controller","room":"DEMO","player":1}
+{ "type": "join", "role": "controller", "room": "DEMO", "player": 1 }
 ```
 
 For every recognized swing, send:
 
 ```json
-{"type":"gesture","gesture":"forehand","strength":82,"probability":0.94}
+{
+  "type": "gesture",
+  "gesture": "forehand",
+  "strength": 82,
+  "probability": 0.94
+}
 ```
 
 Allowed gestures are `forehand`, `backhand`, and `serve`. `strength` is `0–100`; `probability` is TinyML confidence `0–1`. Do not send a message for `still`. If Railway has `CONTROLLER_TOKEN` configured, include `"token":"..."` in the join message.
