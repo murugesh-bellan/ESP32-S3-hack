@@ -1,0 +1,41 @@
+{
+  "name": "edge_impulse",
+  "version": "1.0.0",
+  "description": "Vendored Edge Impulse C++ SDK export (studio project mbellan-project-1 / 1100950). This mirrors the SDK's own Zephyr/ESP32 CMake recipe (edge-impulse-sdk/cmake/zephyr/CMakeLists.txt, the `BOARD MATCHES esp32` branch): compile the whole tree except CMSIS (ARM-only) and the ESP-NN/esp-dsp hardware-accelerated kernels (structured as ESP-IDF components with hand-written Xtensa assembly - not something PlatformIO's plain Arduino source build can register; the SDK falls back to its portable reference C++ kernels without them, just without ESP32-specific speedups).",
+  "build": {
+    "srcFilter": [
+      "-<*>",
+      "+<**/*.cpp>",
+      "+<**/*.cc>",
+      "+<**/*.c>",
+      "-<CMSIS/**>",
+      "-<edge-impulse-sdk/CMSIS/**>",
+      "-<edge-impulse-sdk/porting/android/**>",
+      "-<edge-impulse-sdk/porting/ambiq/**>",
+      "-<edge-impulse-sdk/porting/arduino/**>",
+      "-<edge-impulse-sdk/porting/brickml/**>",
+      "-<edge-impulse-sdk/porting/ceva-npn/**>",
+      "-<edge-impulse-sdk/porting/clib/**>",
+      "-<edge-impulse-sdk/porting/ethos-core-driver/**>",
+      "-<edge-impulse-sdk/porting/himax/**>",
+      "-<edge-impulse-sdk/porting/himax-we2/**>",
+      "-<edge-impulse-sdk/porting/iar/**>",
+      "-<edge-impulse-sdk/porting/infineon-psoc62/**>",
+      "-<edge-impulse-sdk/porting/mbed/**>",
+      "-<edge-impulse-sdk/porting/mingw32/**>",
+      "-<edge-impulse-sdk/porting/particle/**>",
+      "-<edge-impulse-sdk/porting/posix/**>",
+      "-<edge-impulse-sdk/porting/raspberry/**>",
+      "-<edge-impulse-sdk/porting/renesas-ra/**>",
+      "-<edge-impulse-sdk/porting/seeed-vision-ai/**>",
+      "-<edge-impulse-sdk/porting/silabs/**>",
+      "-<edge-impulse-sdk/porting/sony/**>",
+      "-<edge-impulse-sdk/porting/stm32-cubeai/**>",
+      "-<edge-impulse-sdk/porting/synaptics/**>",
+      "-<edge-impulse-sdk/porting/ti/**>",
+      "-<edge-impulse-sdk/porting/zephyr/**>",
+      "-<edge-impulse-sdk/porting/espressif/esp-dsp/**>",
+      "-<edge-impulse-sdk/porting/espressif/ESP-NN/**>"
+    ]
+  }
+}
