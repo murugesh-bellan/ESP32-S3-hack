@@ -12,7 +12,7 @@ https://gist.github.com/sam-tucker/81840112bb3747a2f641d248b08507b6
 
   - BONUS: After classifying 'shot type', use raw IMU data (Accelerometer) to detect stregnth (fake speed to know how fast/slow was the swing) in percentage (accuracy of model classification) 
 
-4. Train Tiny ML model for the above gestures (Impulse Edge platform or locally on your laptop) and deploy it on Arduino to test accuracy of it with cable and without. - MB
+4. Train Tiny ML model (Edge Impluse or directly using TF etc) for the above gestures (Impulse Edge platform or locally on your laptop) and deploy it on Arduino to test accuracy of it with cable and without. - MB
 
 5. Show in UI & output in logs, later we will need to send it to the Game server using sockets - MB
 
