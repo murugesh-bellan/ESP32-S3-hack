@@ -25,6 +25,11 @@ const MIME_TYPES = {
 
 const rooms = new Map();
 const webSocketServer = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE_BYTES });
+let nextClientId = 1;
+
+function log(event, details = {}) {
+  console.log(JSON.stringify({ event: `tiny-tennis.${event}`, ...details }));
+}
 
 function send(socket, message) {
   if (socket.readyState === WebSocket.OPEN) {
@@ -33,11 +38,14 @@ function send(socket, message) {
 }
 
 function broadcast(room, message, except) {
+  let delivered = 0;
   for (const client of room.clients) {
     if (client !== except) {
       send(client.socket, message);
+      delivered += 1;
     }
   }
+  return delivered;
 }
 
 function getRoom(roomCode) {
@@ -94,11 +102,13 @@ function joinRoom(client, message) {
   const roomCode = normalizedRoom(message.room);
   const role = message.role === "browser" || message.role === "controller" ? message.role : undefined;
   if (!roomCode || !role) {
+    log("join_rejected", { clientId: client.id, reason: "invalid_join" });
     send(client.socket, { type: "error", code: "invalid-join", message: "Join requires a valid room and role." });
     return;
   }
 
   if (role === "controller" && process.env.CONTROLLER_TOKEN && message.token !== process.env.CONTROLLER_TOKEN) {
+    log("join_rejected", { clientId: client.id, reason: "unauthorized", role, room: roomCode });
     send(client.socket, { type: "error", code: "unauthorized", message: "Invalid controller token." });
     client.socket.close(1008, "Unauthorized");
     return;
@@ -110,6 +120,7 @@ function joinRoom(client, message) {
     const requestedPlayer = normalizedPlayer(message.player);
     player = requestedPlayer ?? ([1, 2].find((candidate) => !room.controllers.has(candidate)));
     if (!player || room.controllers.has(player)) {
+      log("join_rejected", { clientId: client.id, reason: "player_unavailable", role, room: roomCode, requestedPlayer });
       send(client.socket, { type: "error", code: "player-unavailable", message: "Both controller slots are already occupied." });
       return;
     }
@@ -123,10 +134,12 @@ function joinRoom(client, message) {
   room.clients.add(client);
   send(client.socket, { type: "joined", room: roomCode, role, player: player ?? null });
   broadcast(room, { type: "participant-joined", role, player: player ?? null }, client);
+  log("joined", { clientId: client.id, role, room: roomCode, player: player ?? null, clients: room.clients.size });
 }
 
 function handleControllerMessage(client, message) {
   if (!client.room || client.role !== "controller") {
+    log("gesture_rejected", { clientId: client.id, reason: "not_controller" });
     send(client.socket, { type: "error", code: "not-controller", message: "Join as a controller before sending gestures." });
     return;
   }
@@ -137,6 +150,7 @@ function handleControllerMessage(client, message) {
   const probabilityValue = message.probability ?? message.confidence;
   const probability = normalizedNumber(probabilityValue, 0, 1);
   if (!GESTURES.has(gesture) || strength === undefined || probability === undefined) {
+    log("gesture_rejected", { clientId: client.id, reason: "invalid_gesture", gesture: gesture ?? null });
     send(client.socket, {
       type: "error",
       code: "invalid-gesture",
@@ -147,7 +161,7 @@ function handleControllerMessage(client, message) {
 
   const room = client.room;
   room.sequence += 1;
-  broadcast(room, {
+  const shot = {
     type: "shot",
     player: client.player,
     gesture,
@@ -157,22 +171,36 @@ function handleControllerMessage(client, message) {
     confidence: probability,
     sequence: room.sequence,
     timestamp: Date.now(),
-  }, client);
+  };
+  const delivered = broadcast(room, shot, client);
+  log("shot_relayed", {
+    clientId: client.id,
+    room: client.roomCode,
+    player: client.player,
+    gesture,
+    strength,
+    probability,
+    sequence: room.sequence,
+    recipients: delivered,
+  });
 }
 
 webSocketServer.on("connection", (socket) => {
-  const client = { socket, room: undefined, roomCode: undefined, role: undefined, player: undefined };
+  const client = { id: nextClientId++, socket, room: undefined, roomCode: undefined, role: undefined, player: undefined };
+  log("ws_connected", { clientId: client.id });
 
   socket.on("message", (rawMessage) => {
     let message;
     try {
       message = JSON.parse(rawMessage.toString());
     } catch {
+      log("message_rejected", { clientId: client.id, reason: "invalid_json" });
       send(socket, { type: "error", code: "invalid-json", message: "Message must be valid JSON." });
       return;
     }
 
     if (!message || typeof message !== "object") {
+      log("message_rejected", { clientId: client.id, reason: "invalid_message" });
       send(socket, { type: "error", code: "invalid-message", message: "Message must be a JSON object." });
       return;
     }
@@ -187,17 +215,25 @@ webSocketServer.on("connection", (socket) => {
       return;
     }
 
+    log("message_rejected", { clientId: client.id, reason: "unknown_type", type: message.type ?? null });
     send(socket, { type: "error", code: "unknown-message", message: "Supported messages are join and gesture." });
   });
 
-  socket.on("close", () => removeClient(client));
-  socket.on("error", () => removeClient(client));
+  socket.on("close", (code, reason) => {
+    log("ws_closed", { clientId: client.id, code, reason: reason.toString(), room: client.roomCode ?? null, player: client.player ?? null });
+    removeClient(client);
+  });
+  socket.on("error", (error) => {
+    log("ws_error", { clientId: client.id, message: error.message });
+    removeClient(client);
+  });
 });
 
 const server = http.createServer(async (request, response) => {
   const requestUrl = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
 
   if (requestUrl.pathname === "/health") {
+    log("health", { rooms: rooms.size });
     response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
     response.end(JSON.stringify({ ok: true, rooms: rooms.size }));
     return;
@@ -238,6 +274,7 @@ const server = http.createServer(async (request, response) => {
 server.on("upgrade", (request, socket, head) => {
   const requestUrl = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
   if (requestUrl.pathname !== "/ws") {
+    log("upgrade_rejected", { path: requestUrl.pathname });
     socket.destroy();
     return;
   }
@@ -266,8 +303,10 @@ webSocketServer.on("connection", (socket) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Tiny Tennis relay listening on port ${PORT}`);
+  log("started", { port: PORT, node: process.version });
 });
+
+server.on("error", (error) => log("server_error", { message: error.message }));
 
 function shutdown() {
   clearInterval(heartbeat);
