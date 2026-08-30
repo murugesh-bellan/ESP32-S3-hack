@@ -16,7 +16,7 @@ https://gist.github.com/sam-tucker/81840112bb3747a2f641d248b08507b6
 
 5. Show in UI & output in logs, later we will need to send it to the Game server using sockets - MB
 
-6. Make a sound (beep or voice sample) for each shot type that was detected as it was swung but no sound when it's STILL - MB
+6. Make a sound (beep or play voice sample) for each shot type that was detected as it was swung but no sound when it's STILL - MB
 
 ```sh
 ╭──────────────╮
