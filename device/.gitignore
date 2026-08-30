@@ -1,0 +1,6 @@
+.pio/
+.vscode/
+include/wifi_config.h
+.DS_Store
+__pycache__/
+*.pyc
