@@ -1,16 +1,17 @@
 import Phaser from "phaser";
 
-import { playBallHit, playBounce, playOut, preloadCourtSounds } from "../audio/GameAudio";
+import { playBallHit, playBounce, playOut, playWon, preloadCourtSounds } from "../audio/GameAudio";
 import { ScoreAnnouncer } from "../audio/ScoreAnnouncer";
 import type { GameAction, PlayerId } from "../input/GameAction";
 import type { InputAdapter } from "../input/InputAdapter";
 import { KeyboardInputAdapter } from "../input/KeyboardInputAdapter";
+import { WebSocketInputAdapter } from "../input/WebSocketInputAdapter";
 import { addMenuExit } from "../ui/addMenuExit";
 import { createUiButton } from "../ui/UiButton";
 import { Ball, type HitResult } from "./Ball";
 import { Court } from "./Court";
 import { Player } from "./Player";
-import { POINTS_TO_WIN, Score } from "./Score";
+import { Score, type TennisOpponent } from "./Score";
 import { Stadium } from "./Stadium";
 
 const FONT_STACK = '"Courier New", Courier, monospace';
@@ -30,8 +31,9 @@ export class GameScene extends Phaser.Scene {
   private announcer!: ScoreAnnouncer;
   private stadium!: Stadium;
   private scoreTexts!: Record<PlayerId, Phaser.GameObjects.Text>;
+  private scoreStatusText!: Phaser.GameObjects.Text;
   private rallyText!: Phaser.GameObjects.Text;
-  private inputAdapter!: InputAdapter;
+  private inputAdapters: InputAdapter[] = [];
   private actionText!: Phaser.GameObjects.Text;
   private actionDetailText!: Phaser.GameObjects.Text;
   private actionResetTimer?: Phaser.Time.TimerEvent;
@@ -63,7 +65,7 @@ export class GameScene extends Phaser.Scene {
     this.actionResetTimer = undefined;
     this.restartTimer = undefined;
     this.score = new Score();
-    this.announcer = new ScoreAnnouncer(this.mode === "computer" ? "Computer" : "Player two");
+    this.announcer = new ScoreAnnouncer();
 
     this.cameras.main.fadeIn(220, 7, 31, 24);
     this.drawBackdrop();
@@ -81,6 +83,11 @@ export class GameScene extends Phaser.Scene {
     this.startInput();
     addMenuExit(this);
     this.showServePrompt();
+    this.time.delayedCall(420, () => {
+      if (!this.matchOver) {
+        this.announcer.announce(this.score.getCallout(this.opponentVoice()));
+      }
+    });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.announcer.stop());
   }
@@ -130,18 +137,18 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.scoreTexts = {
-      1: this.add.text(287, 29, "0", {
+      1: this.add.text(300, 28, this.score.getDisplay(1), {
         fontFamily: FONT_STACK,
-        fontSize: "34px",
+        fontSize: "30px",
         fontStyle: "bold",
         color: gold,
-      }),
-      2: this.add.text(1211, 29, "0", {
+      }).setOrigin(1, 0),
+      2: this.add.text(1_218, 28, this.score.getDisplay(2), {
         fontFamily: FONT_STACK,
-        fontSize: "34px",
+        fontSize: "30px",
         fontStyle: "bold",
         color: gold,
-      }),
+      }).setOrigin(1, 0),
     };
 
     this.add.text(640, 17, "TINY TENNIS", {
@@ -153,7 +160,7 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 5,
     }).setOrigin(0.5, 0);
 
-    this.add.text(640, 52, `${this.mode === "computer" ? "LEVEL 2 • VS COMPUTER" : "LEVEL 3 • TWO PLAYERS"}  •  FIRST TO ${POINTS_TO_WIN}`, {
+    this.add.text(640, 52, `${this.mode === "computer" ? "LEVEL 2 • VS COMPUTER" : "LEVEL 3 • TWO PLAYERS"}  •  ONE TENNIS GAME`, {
       fontFamily: FONT_STACK,
       fontSize: "12px",
       fontStyle: "bold",
@@ -161,9 +168,17 @@ export class GameScene extends Phaser.Scene {
       letterSpacing: 1,
     }).setOrigin(0.5, 0);
 
-    this.rallyText = this.add.text(640, 78, "RALLY  0", {
+    this.scoreStatusText = this.add.text(640, 72, this.score.getStatusLabel(playerTwoLabel), {
       fontFamily: FONT_STACK,
-      fontSize: "11px",
+      fontSize: "13px",
+      fontStyle: "bold",
+      color: "#dfff3f",
+      letterSpacing: 2,
+    }).setOrigin(0.5, 0).setDepth(102);
+
+    this.rallyText = this.add.text(640, 91, "RALLY  0", {
+      fontFamily: FONT_STACK,
+      fontSize: "9px",
       fontStyle: "bold",
       color: "#7fa38b",
       letterSpacing: 2,
@@ -211,9 +226,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startInput(): void {
-    this.inputAdapter = new KeyboardInputAdapter();
-    this.inputAdapter.start((action) => this.handleAction(action));
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.inputAdapter.stop());
+    const keyboard = new KeyboardInputAdapter();
+    this.inputAdapters = [keyboard];
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get("room")?.trim();
+    if (room) {
+      this.inputAdapters.push(new WebSocketInputAdapter({
+        room,
+        token: params.get("token") ?? undefined,
+      }));
+    }
+
+    this.inputAdapters.forEach((adapter) => adapter.start((action) => this.handleAction(action)));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.inputAdapters.forEach((adapter) => adapter.stop());
+      this.inputAdapters = [];
+    });
   }
 
   private handleAction(action: GameAction, fromComputer = false): void {
@@ -349,6 +377,7 @@ export class GameScene extends Phaser.Scene {
     playOut(this);
     const matchWinner = this.score.awardPoint(pointWinner);
     this.updateScoreboard(pointWinner);
+    this.announcer.announce(this.score.getCallout(this.opponentVoice()));
     this.actionResetTimer?.remove(false);
     this.cameras.main.flash(130, 245, 238, 196, false);
     this.players[missedPlayer].reactToMiss();
@@ -360,12 +389,10 @@ export class GameScene extends Phaser.Scene {
     this.updateRallyMeter();
 
     if (matchWinner) {
-      this.announcer.announceWinner(matchWinner);
       this.finishMatch(matchWinner);
       return;
     }
 
-    this.announcer.announcePoint(pointWinner, this.score.get(1), this.score.get(2));
     this.setActionMessage(`${this.displayName(pointWinner)} WINS THE POINT!`, this.scoreLine());
 
     this.server = this.server === 1 ? 2 : 1;
@@ -395,8 +422,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateScoreboard(pointWinner: PlayerId): void {
+    this.scoreTexts[1].setText(this.score.getDisplay(1));
+    this.scoreTexts[2].setText(this.score.getDisplay(2));
+    this.scoreStatusText.setText(this.score.getStatusLabel(this.opponentLabel()));
     const scoreText = this.scoreTexts[pointWinner];
-    scoreText.setText(this.score.get(pointWinner).toString());
     this.tweens.add({
       targets: scoreText,
       scale: 1.45,
@@ -409,6 +438,7 @@ export class GameScene extends Phaser.Scene {
   private finishMatch(winner: PlayerId): void {
     this.matchOver = true;
     this.ball.stop();
+    playWon(this);
     this.stadium.reactCrowd(1.6);
     this.players[winner].celebrate();
     this.showWinnerConfetti();
@@ -464,7 +494,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private scoreLine(): string {
-    return `P1 ${this.score.get(1)}  —  ${this.mode === "computer" ? "CPU" : "P2"} ${this.score.get(2)}`;
+    return `P1 ${this.score.getDisplay(1)}  —  ${this.opponentLabel()} ${this.score.getDisplay(2)}`;
+  }
+
+  private opponentLabel(): "CPU" | "P2" {
+    return this.mode === "computer" ? "CPU" : "P2";
+  }
+
+  private opponentVoice(): TennisOpponent {
+    return this.mode === "computer" ? "computer" : "player-two";
   }
 
   private shotDetail(action: GameAction): string {

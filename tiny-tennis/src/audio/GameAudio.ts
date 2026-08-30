@@ -6,6 +6,7 @@ export const AUDIO_KEYS = {
   ballHit: "audio-ball-hit",
   bounce: "audio-bounce",
   out: "audio-out",
+  won: "audio-won",
   menuMusic: "audio-menu-music",
   practiceMusic: "audio-practice-music",
 } as const;
@@ -29,6 +30,7 @@ export function preloadCourtSounds(scene: Phaser.Scene): void {
   loadOnce(scene, AUDIO_KEYS.ballHit, "ball-hit.mp3");
   loadOnce(scene, AUDIO_KEYS.bounce, "bounce.mp3");
   loadOnce(scene, AUDIO_KEYS.out, "out.mp3");
+  loadOnce(scene, AUDIO_KEYS.won, "won.mp3");
 }
 
 export function startSceneMusic(
@@ -70,4 +72,8 @@ export function playBounce(scene: Phaser.Scene): void {
 
 export function playOut(scene: Phaser.Scene): void {
   scene.sound.play(AUDIO_KEYS.out, { volume: 0.62 });
+}
+
+export function playWon(scene: Phaser.Scene): void {
+  scene.sound.play(AUDIO_KEYS.won, { volume: 0.78 });
 }

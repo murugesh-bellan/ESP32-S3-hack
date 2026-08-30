@@ -7,5 +7,6 @@ export interface GameAction {
   type: ShotType;
   power: number;
   direction: number;
+  confidence?: number;
   timestamp: number;
 }

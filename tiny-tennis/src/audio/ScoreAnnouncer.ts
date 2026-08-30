@@ -1,20 +1,9 @@
-import type { PlayerId } from "../input/GameAction";
+import type { ScoreCallout } from "../game/Score";
 
 export class ScoreAnnouncer {
-  public constructor(private readonly playerTwoName: string) {}
-
-  public announcePoint(
-    pointWinner: PlayerId,
-    playerOneScore: number,
-    playerTwoScore: number,
-  ): void {
-    const winnerName = pointWinner === 1 ? "Player one" : this.playerTwoName;
-    this.speak(`${winnerName} scores. ${playerOneScore} to ${playerTwoScore}.`);
-  }
-
-  public announceWinner(winner: PlayerId): void {
-    const winnerName = winner === 1 ? "Player one" : this.playerTwoName;
-    this.speak(`${winnerName} wins the match.`);
+  public announce(callout: ScoreCallout): void {
+    console.info(`Score callout: ${callout.key}`);
+    this.speak(callout.text);
   }
 
   public stop(): void {

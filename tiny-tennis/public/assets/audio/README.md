@@ -9,10 +9,15 @@ The game currently loads these files from the project's top-level `assets/` dire
 - `ball-hit.mp3` — every successful serve or racket return, including computer shots
 - `bounce.mp3` — every grass-court bounce in Practice and match modes
 - `out.mp3` — a missed/out call when the visible miss flight ends the rally
+- `won.mp3` — match victory sting when Player 1, Computer or Player 2 wins
 
 The supplied `bounce.mov` contains an MP3 audio track. It is preserved as the source file; `bounce.mp3` is the browser-ready extracted version used by the game.
 
 Browsers can delay music until the player's first click or key press because of autoplay restrictions.
+
+## Score voice recordings
+
+The game now uses Love/15/30/40, deuce, advantage and game scoring. The exact **22-file** voice script and filenames are in [`SCORE_RECORDINGS.md`](./SCORE_RECORDINGS.md). Browser speech synthesis remains active until those recordings are supplied.
 
 ## Optional future sounds
 

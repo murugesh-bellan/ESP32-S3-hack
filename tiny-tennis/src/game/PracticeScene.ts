@@ -11,6 +11,7 @@ import {
 import type { GameAction } from "../input/GameAction";
 import type { InputAdapter } from "../input/InputAdapter";
 import { KeyboardInputAdapter } from "../input/KeyboardInputAdapter";
+import { WebSocketInputAdapter } from "../input/WebSocketInputAdapter";
 import { addMenuExit } from "../ui/addMenuExit";
 import { createUiButton } from "../ui/UiButton";
 import { Player } from "./Player";
@@ -22,7 +23,7 @@ const INTERCEPT_OFFSET = 0.1;
 export class PracticeScene extends Phaser.Scene {
   private player!: Player;
   private ball!: PracticeBall;
-  private inputAdapter!: InputAdapter;
+  private inputAdapters: InputAdapter[] = [];
   private resetTimer?: Phaser.Time.TimerEvent;
   private hits = 0;
   private misses = 0;
@@ -186,9 +187,22 @@ export class PracticeScene extends Phaser.Scene {
   }
 
   private startInput(): void {
-    this.inputAdapter = new KeyboardInputAdapter();
-    this.inputAdapter.start((action) => this.handleAction(action));
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.inputAdapter.stop());
+    const keyboard = new KeyboardInputAdapter();
+    this.inputAdapters = [keyboard];
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get("room")?.trim();
+    if (room) {
+      this.inputAdapters.push(new WebSocketInputAdapter({
+        room,
+        token: params.get("token") ?? undefined,
+      }));
+    }
+
+    this.inputAdapters.forEach((adapter) => adapter.start((action) => this.handleAction(action)));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.inputAdapters.forEach((adapter) => adapter.stop());
+      this.inputAdapters = [];
+    });
   }
 
   private handleAction(action: GameAction): void {

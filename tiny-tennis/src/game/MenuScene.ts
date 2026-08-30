@@ -66,7 +66,7 @@ export class MenuScene extends Phaser.Scene {
     createUiButton(this, 640, 432, 430, 62, "LEVEL 2  —  PLAY COMPUTER", () => {
       this.startMode("GameScene", { mode: "computer" });
     });
-    this.add.text(640, 471, "first to five points • Player 1 controls the near court", {
+    this.add.text(640, 471, "one tennis game • deuce and advantage • near court is Player 1", {
       fontFamily: FONT_STACK,
       fontSize: "13px",
       color: "#c6d3bd",
@@ -75,7 +75,7 @@ export class MenuScene extends Phaser.Scene {
     createUiButton(this, 640, 546, 430, 62, "LEVEL 3  —  TWO PLAYERS", () => {
       this.startMode("GameScene", { mode: "local" });
     });
-    this.add.text(640, 585, "share one keyboard • first to five points", {
+    this.add.text(640, 585, "share one keyboard • one tennis game with deuce", {
       fontFamily: FONT_STACK,
       fontSize: "13px",
       color: "#c6d3bd",
