@@ -1,0 +1,43 @@
+:root {
+  color-scheme: dark;
+  font-family: "Courier New", Courier, monospace;
+  background: #061d16;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(41, 104, 63, 0.42), transparent 55%),
+    #061d16;
+}
+
+#game-shell,
+#game-container {
+  width: 100%;
+  height: 100%;
+}
+
+#game-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.55);
+}

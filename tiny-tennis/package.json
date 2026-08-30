@@ -1,0 +1,43 @@
+{
+  "name": "iot-tiny-tennis",
+  "version": "1.0.0",
+  "description": "Hackathon project to make a fun tennis game using ESP 32 board and web app to go along for a single and multi-player experience.",
+  "keywords": [
+    "IoT",
+    "Game",
+    "Tennis",
+    "ESP",
+    "32",
+    "Gesture",
+    "Game",
+    "Multiplayer",
+    "tennis",
+    "Granola",
+    "Hackathon"
+  ],
+  "homepage": "https://github.com/suyashcjoshi/ESP32-S3-hack#readme",
+  "bugs": {
+    "url": "https://github.com/suyashcjoshi/ESP32-S3-hack/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suyashcjoshi/ESP32-S3-hack.git"
+  },
+  "license": "MIT",
+  "author": "Suyash Joshi & Murugesh Bellan",
+  "type": "module",
+  "main": "dist/game.js",
+  "scripts": {
+    "dev": "esbuild src/main.ts --bundle --outfile=dist/game.js --sourcemap --servedir=. --serve=8000",
+    "build": "esbuild src/main.ts --bundle --outfile=dist/game.js --minify --sourcemap",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "phaser": "^4.2.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "serve": "^14.2.6",
+    "typescript": "^7.0.2"
+  }
+}
