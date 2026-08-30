@@ -210,16 +210,29 @@ bool wsConnected = false;
 
 void onWsEvent(WStype_t type, uint8_t *payload, size_t length) {
   switch (type) {
-    case WStype_CONNECTED:
+    case WStype_CONNECTED: {
       wsConnected = true;
       Serial.printf("WS connected to %s:%d%s\n", WS_HOST, WS_PORT, WS_PATH);
+      // server/index.js drops any "gesture" message until this connection has
+      // joined a room as a controller - join must happen before sendGestureEvent
+      // can do anything useful.
+      char join[96];
+      snprintf(join, sizeof(join), "{\"type\":\"join\",\"role\":\"controller\",\"room\":\"%s\",\"player\":%d}",
+               WS_ROOM, WS_PLAYER);
+      wsClient.sendTXT(join);
+      Serial.printf("WS join sent: %s\n", join);
       break;
+    }
     case WStype_DISCONNECTED:
       wsConnected = false;
       Serial.println("WS disconnected.");
       break;
+    case WStype_TEXT:
+      // Expect {"type":"joined",...} or {"type":"error",...} back from the join.
+      Serial.printf("WS recv: %.*s\n", (int)length, payload);
+      break;
     default:
-      break;  // no messages expected from the relay toward the board
+      break;
   }
 }
 
@@ -252,7 +265,7 @@ void sendGestureEvent(const char *gesture, int strength, float probability) {
 // still - "still" IS a trained class here, unlike the earlier hand-rolled
 // classifier, so a false trigger can self-report as "still" and get
 // suppressed below instead of forcing a wrong shot label).
-bool playMode = false;
+bool playMode = true;  // boot straight into Play mode for the demo; toggle button still works
 
 struct ImuSample {
   float ax, ay, az, gx, gy, gz;
@@ -268,7 +281,11 @@ constexpr float SWING_THRESHOLD_G = 1.5f;
 // with pre-roll) - matches the model's 120-sample/200Hz training window
 // length exactly; the resample step below retimes it onto that 200Hz grid.
 constexpr uint32_t CAPTURE_WINDOW_MS = 600;
-constexpr uint32_t COOLDOWN_MS = 700;
+// Anti-retrigger guard only (not model-related, safe to tune): just long
+// enough that a swing's own follow-through/deceleration can't immediately
+// re-arm detection. Was 700ms, which stacked with the 600ms capture window
+// to make back-to-back swings feel unresponsive.
+constexpr uint32_t COOLDOWN_MS = 300;
 constexpr uint32_t CARD_DISPLAY_MS = 3000;
 
 constexpr size_t PRE_BUFFER_SIZE = 64;  // ~285ms of pre-roll at ~224Hz gyro ODR
