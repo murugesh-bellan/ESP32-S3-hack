@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 
 import { GameScene } from "../game/GameScene";
+import { MenuScene } from "../game/MenuScene";
+import { PracticeScene } from "../game/PracticeScene";
 
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
@@ -22,5 +24,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
   },
-  scene: [GameScene],
+  scene: [MenuScene, GameScene, PracticeScene],
 };

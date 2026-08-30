@@ -29,12 +29,13 @@ export class Court {
   public constructor(private readonly scene: Phaser.Scene) {}
 
   public draw(): void {
-    const graphics = this.scene.add.graphics();
+    const courtGraphics = this.scene.add.graphics().setDepth(0);
+    const netGraphics = this.scene.add.graphics().setDepth(20);
 
-    this.drawSurround(graphics);
-    this.drawPlayingSurface(graphics);
-    this.drawCourtLines(graphics);
-    this.drawNet(graphics);
+    this.drawSurround(courtGraphics);
+    this.drawPlayingSurface(courtGraphics);
+    this.drawCourtLines(courtGraphics);
+    this.drawNet(netGraphics);
   }
 
   private drawSurround(graphics: Phaser.GameObjects.Graphics): void {
