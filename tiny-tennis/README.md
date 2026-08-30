@@ -44,6 +44,8 @@ TinyML IMU gesture → { gesture, strength, probability }
 
 The trained Arduino TinyML model supplies the shot classification (`forehand`, `backhand`, `serve`) and confidence. The IMU-derived strength becomes shot power. Direction is currently neutral for hardware input; gyro-derived aiming can be added later without changing the transport contract.
 
+When a room is active, the top of the game screen shows `CONNECTING`, `CONNECTED`, or `OFFLINE`. After each Arduino shot it displays the player, stroke and power, so you can verify the complete link without opening developer tools.
+
 ## Run locally
 
 From the repository root:

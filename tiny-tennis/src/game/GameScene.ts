@@ -36,6 +36,7 @@ export class GameScene extends Phaser.Scene {
   private inputAdapters: InputAdapter[] = [];
   private actionText!: Phaser.GameObjects.Text;
   private actionDetailText!: Phaser.GameObjects.Text;
+  private controllerStatusText?: Phaser.GameObjects.Text;
   private actionResetTimer?: Phaser.Time.TimerEvent;
   private restartTimer?: Phaser.Time.TimerEvent;
   private server: PlayerId = 1;
@@ -80,6 +81,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.drawHud();
     this.createActionMonitor();
+    this.createControllerStatus();
     this.startInput();
     addMenuExit(this);
     this.showServePrompt();
@@ -234,6 +236,8 @@ export class GameScene extends Phaser.Scene {
       this.inputAdapters.push(new WebSocketInputAdapter({
         room,
         token: params.get("token") ?? undefined,
+        onStatus: (status) => this.controllerStatusText?.setText(`CONTROLLER LINK  ${status.toUpperCase()}`).setColor(status === "connected" ? "#dfff3f" : "#ffb86b"),
+        onShot: (action) => this.controllerStatusText?.setText(`CONTROLLER LINK  CONNECTED  •  P${action.player} ${action.type.toUpperCase()} ${Math.round(action.power * 100)}%`),
       }));
     }
 
@@ -242,6 +246,14 @@ export class GameScene extends Phaser.Scene {
       this.inputAdapters.forEach((adapter) => adapter.stop());
       this.inputAdapters = [];
     });
+  }
+
+  private createControllerStatus(): void {
+    const room = new URLSearchParams(window.location.search).get("room")?.trim();
+    if (!room) return;
+    this.controllerStatusText = this.add.text(640, 16, `CONTROLLER LINK  CONNECTING  •  ROOM ${room}`, {
+      fontFamily: FONT_STACK, fontSize: "11px", fontStyle: "bold", color: "#ffb86b", letterSpacing: 1,
+    }).setOrigin(0.5, 0).setDepth(110);
   }
 
   private handleAction(action: GameAction, fromComputer = false): void {
