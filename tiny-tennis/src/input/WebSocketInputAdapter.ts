@@ -5,6 +5,8 @@ export interface WebSocketInputAdapterOptions {
   room: string;
   url?: string;
   token?: string;
+  onStatus?: (status: "connecting" | "connected" | "offline") => void;
+  onShot?: (action: GameAction) => void;
 }
 
 interface ShotMessage {
@@ -27,10 +29,16 @@ export class WebSocketInputAdapter implements InputAdapter {
     this.stop();
     this.onAction = onAction;
     const url = this.options.url ?? this.defaultUrl();
+    this.options.onStatus?.("connecting");
     this.socket = new WebSocket(url);
+    this.socket.addEventListener("open", () => this.options.onStatus?.("connected"));
     this.socket.addEventListener("open", this.handleOpen);
     this.socket.addEventListener("message", this.handleMessage);
-    this.socket.addEventListener("error", () => console.warn("Tiny Tennis WebSocket unavailable", url));
+    this.socket.addEventListener("error", () => {
+      this.options.onStatus?.("offline");
+      console.warn("Tiny Tennis WebSocket unavailable", url);
+    });
+    this.socket.addEventListener("close", () => this.options.onStatus?.("offline"));
   }
 
   public stop(): void {
@@ -66,14 +74,16 @@ export class WebSocketInputAdapter implements InputAdapter {
     }
 
     const confidence = message.confidence ?? message.probability;
-    this.onAction?.({
+    const action: GameAction = {
       player: message.player,
       type: message.gesture,
       power: clamp(message.power, 0, 1),
       direction: 0,
       confidence: confidence === undefined ? undefined : clamp(confidence, 0, 1),
       timestamp: message.timestamp ?? performance.now(),
-    });
+    };
+    this.onAction?.(action);
+    this.options.onShot?.(action);
   };
 
   private isShotMessage(message: unknown): message is ShotMessage {

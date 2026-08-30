@@ -46,7 +46,8 @@ Allowed gestures are `forehand`, `backhand`, and `serve`. `strength` is `0–100
 3. Confirm `https://YOUR-RAILWAY-DOMAIN/health` returns JSON with `ok: true`.
 4. Open `https://YOUR-RAILWAY-DOMAIN/?room=DEMO` in the game browser.
 5. Connect the Arduino to `wss://YOUR-RAILWAY-DOMAIN/ws`, send the join JSON, then send a test forehand JSON. Player 1 should react in the browser.
-6. Test backhand, serve, low/high strength, and a second controller using `player:2`.
-7. If hardware is not ready, run the same flow locally with `npm install && npm run build && npm start`, open `http://localhost:8080/?room=DEMO`, and use keyboard controls.
+6. Check the in-game top status line: it should change from `CONNECTING` to `CONNECTED`, then show the last player/stroke/power received.
+7. Test backhand, serve, low/high strength, and a second controller using `player:2`.
+8. If hardware is not ready, run the same flow locally with `npm install && npm run build && npm start`, open `http://localhost:8080/?room=DEMO`, and use keyboard controls.
 
 For the full message examples and troubleshooting, see [`server/README.md`](server/README.md). The game itself is documented in [`tiny-tennis/README.md`](tiny-tennis/README.md).

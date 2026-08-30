@@ -35,6 +35,7 @@ export class PracticeScene extends Phaser.Scene {
   private bestStreakText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private detailText!: Phaser.GameObjects.Text;
+  private controllerStatusText?: Phaser.GameObjects.Text;
 
   public constructor() {
     super("PracticeScene");
@@ -54,6 +55,7 @@ export class PracticeScene extends Phaser.Scene {
     this.cameras.main.fadeIn(220, 7, 31, 24);
     this.drawPracticeCourt();
     this.createHud();
+    this.createControllerStatus();
     this.player = new Player(this, 640, 625, "near");
     this.ball = new PracticeBall(this, {
       onIncoming: (targetCourtX) => this.positionForReturn(targetCourtX),
@@ -195,6 +197,8 @@ export class PracticeScene extends Phaser.Scene {
       this.inputAdapters.push(new WebSocketInputAdapter({
         room,
         token: params.get("token") ?? undefined,
+        onStatus: (status) => this.controllerStatusText?.setText(`CONTROLLER LINK  ${status.toUpperCase()}`).setColor(status === "connected" ? "#dfff3f" : "#ffb86b"),
+        onShot: (action) => this.controllerStatusText?.setText(`CONTROLLER LINK  CONNECTED  •  P${action.player} ${action.type.toUpperCase()} ${Math.round(action.power * 100)}%`),
       }));
     }
 
@@ -203,6 +207,14 @@ export class PracticeScene extends Phaser.Scene {
       this.inputAdapters.forEach((adapter) => adapter.stop());
       this.inputAdapters = [];
     });
+  }
+
+  private createControllerStatus(): void {
+    const room = new URLSearchParams(window.location.search).get("room")?.trim();
+    if (!room) return;
+    this.controllerStatusText = this.add.text(640, 16, `CONTROLLER LINK  CONNECTING  •  ROOM ${room}`, {
+      fontFamily: FONT_STACK, fontSize: "11px", fontStyle: "bold", color: "#ffb86b", letterSpacing: 1,
+    }).setOrigin(0.5, 0).setDepth(110);
   }
 
   private handleAction(action: GameAction): void {
